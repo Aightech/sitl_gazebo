@@ -34,7 +34,6 @@
 #include "gazebo/msgs/msgs.hh"
 #include "MotorSpeed.pb.h"
 #include "Float.pb.h"
-#include "Wind.pb.h"
 
 #include "common.h"
 
@@ -50,10 +49,8 @@ static const std::string kDefaultNamespace = "";
 static const std::string kDefaultCommandSubTopic = "/gazebo/command/motor_speed";
 static const std::string kDefaultMotorFailureNumSubTopic = "/gazebo/motor_failure_num";
 static const std::string kDefaultMotorVelocityPubTopic = "/motor_speed";
-std::string wind_sub_topic_ = "/wind";
 
 typedef const boost::shared_ptr<const mav_msgs::msgs::CommandMotorSpeed> CommandMotorSpeedPtr;
-typedef const boost::shared_ptr<const physics_msgs::msgs::Wind> WindPtr;
 
 /*
 // Protobuf test
@@ -116,6 +113,9 @@ class GazeboMotorModel : public MotorModel, public ModelPlugin {
   std::string link_name_;
   std::string motor_speed_pub_topic_;
   std::string namespace_;
+  //mod
+  std::string ref_link_vind_vel_name_;
+  physics::LinkPtr link_ref_vel_;
 
   int motor_number_;
   int turning_direction_;
@@ -135,20 +135,47 @@ class GazeboMotorModel : public MotorModel, public ModelPlugin {
   double rotor_velocity_slowdown_sim_;
   double time_constant_down_;
   double time_constant_up_;
+  /*custom model parameters*/
+  /* Coefficients for BET based extended modeling */
+
+  double A=0.1256;
+  double rho=1.21;
+  double R=sqrt(A/3.1415);
+
+  /* multirotors*/
+  /*double ct_1_publi=0.016;*/
+  /*double ct_2_publi=0.03;*/
+  /*double ct_3_publi=0.003;*/
+  
+  /*DACAR model*/
+  double ct_1_publi=0.02850867;
+  double ct_2_publi= 0.341807;
+  double ct_3_publi=0.0;
+
+  double ch_1_publi=0.023;
+  double ch_2_publi=0.035;
+
+  double ct_1=ct_1_publi*rho*A*R*R;
+  double ct_2=ct_2_publi*rho*A*R;
+  double ct_3=ct_3_publi*rho*A;
+  double ch_1=ch_1_publi*rho*A*R;
+  double ch_2=ch_2_publi*rho*A;
+  double eta;
+  double H;
+  double T;
+
 
   transport::NodePtr node_handle_;
   transport::PublisherPtr motor_velocity_pub_;
   transport::SubscriberPtr command_sub_;
   transport::SubscriberPtr motor_failure_sub_; /*!< Subscribing to motor_failure_sub_topic_; receiving motor number to fail, as an integer */
-  transport::SubscriberPtr wind_sub_;
-
-  ignition::math::Vector3d wind_vel_;
 
   physics::ModelPtr model_;
   physics::JointPtr joint_;
   common::PID pid_;
   bool use_pid_;
   physics::LinkPtr link_;
+
   /// \brief Pointer to the update event connection.
   event::ConnectionPtr updateConnection_;
 
@@ -157,8 +184,6 @@ class GazeboMotorModel : public MotorModel, public ModelPlugin {
   std_msgs::msgs::Float turning_velocity_msg_;
   void VelocityCallback(CommandMotorSpeedPtr &rot_velocities);
   void MotorFailureCallback(const boost::shared_ptr<const msgs::Int> &fail_msg);  /*!< Callback for the motor_failure_sub_ subscriber */
-  void WindVelocityCallback(const boost::shared_ptr<const physics_msgs::msgs::Wind> &msg);
-
   std::unique_ptr<FirstOrderFilter<double>>  rotor_velocity_filter_;
 /*
   // Protobuf test
