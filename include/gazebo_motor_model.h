@@ -91,6 +91,7 @@ class GazeboMotorModel : public MotorModel, public ModelPlugin {
         rotor_velocity_slowdown_sim_(kDefaultRotorVelocitySlowdownSim),
         time_constant_down_(kDefaultTimeConstantDown),
         time_constant_up_(kDefaultTimeConstantUp) {
+     
   }
 
   virtual ~GazeboMotorModel();

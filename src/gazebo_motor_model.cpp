@@ -108,7 +108,10 @@ void GazeboMotorModel::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf) {
   if (_sdf->HasElement("ref_link_vind_vel_name"))
     ref_link_vind_vel_name_  = _sdf->GetElement("ref_link_vind_vel_name")->Get<std::string>();
   else
-    gzerr << "[gazebo_motor_model] Please specify a ref_link_vind_vel_name of the rotor.\n";
+    {
+      gzerr << "[gazebo_motor_model] Please specify a ref_link_vind_vel_name of the rotor.\n";
+      ref_link_vind_vel_name_ = _sdf->GetElement("linkName")->Get<std::string>();
+    }
   link_ref_vel_ = model_->GetLink(ref_link_vind_vel_name_);
   if (link_ref_vel_ == NULL)
     gzthrow("[gazebo_motor_model] Couldn't find specified link \"" << ref_link_vind_vel_name_ << "\".");
